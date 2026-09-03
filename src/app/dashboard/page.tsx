@@ -1,102 +1,53 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getAuthState, authFetch } from "@/lib/auth/client";
 
 /* ────────────────────────────────────────────────────────────────
  *  EXECUTIVE SUMMARY DASHBOARD (Modul 1)
  * ──────────────────────────────────────────────────────────────── */
 
-const events = [
-  {
-    id: "EVT001",
-    name: "Workshop Public Speaking 2024",
-    date: "15-16 Sep 2024",
-    location: "Hotel X, Jakarta",
-    status: "completed" as const,
-    statusLabel: "Selesai",
-    progress: 100,
-    participants: 47,
-    budget: 40000000,
-    spent: 17000000,
-    csat: 4.6,
-  },
-  {
-    id: "EVT002",
-    name: "Kelas Coaching Batch 5",
-    date: "1-5 Okt 2024",
-    location: "Sanrays Office",
-    status: "active" as const,
-    statusLabel: "Berlangsung",
-    progress: 65,
-    participants: 32,
-    budget: 25000000,
-    spent: 12000000,
-    csat: 4.3,
-  },
-  {
-    id: "EVT003",
-    name: "Team Building Q4 2024",
-    date: "15-17 Nov 2024",
-    location: "Villa Bintang",
-    status: "preparation" as const,
-    statusLabel: "Persiapan",
-    progress: 40,
-    participants: 25,
-    budget: 35000000,
-    spent: 5000000,
-    csat: 0,
-  },
-];
+interface DashboardEvent {
+  id: string;
+  name: string;
+  date: string;
+  endDate?: string;
+  location?: string;
+  theme?: string;
+  status: string;
+  description?: string;
+  shortDescription?: string;
+  organizer?: string;
+  coverGradient: string;
+  highlights?: string[];
+  maxParticipants: number;
+  price: number;
+  earlyBirdPrice?: number;
+  published: boolean;
+  participants?: number;
+  budget?: number;
+  spent?: number;
+  csat?: number;
+  progress?: number;
+  checklistDone?: number;
+  checklistTotal?: number;
+}
 
-const quickStats = [
-  {
-    label: "Total Event",
-    value: "3",
-    change: "+1 bulan ini",
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-    color: "bg-orange-100 text-orange-600",
-  },
-  {
-    label: "Total Peserta",
-    value: "104",
-    change: "+12 minggu ini",
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 6v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-    color: "bg-blue-100 text-blue-600",
-  },
-  {
-    label: "Total Anggaran",
-    value: "Rp 100 Jt",
-    change: "3 event aktif",
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    color: "bg-emerald-100 text-emerald-600",
-  },
-  {
-    label: "Rata-rata CSAT",
-    value: "4.5",
-    change: "Sangat Baik",
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    color: "bg-amber-100 text-amber-600",
-  },
-];
+const statusLabels: Record<string, string> = {
+  completed: "Selesai",
+  active: "Berlangsung",
+  preparation: "Persiapan",
+  draft: "Draft",
+  cancelled: "Dibatalkan",
+};
 
-const statusColors = {
+
+const statusColors: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
   active: "bg-blue-100 text-blue-700",
   preparation: "bg-orange-100 text-orange-700",
+  draft: "bg-gray-100 text-gray-500",
   cancelled: "bg-red-100 text-red-700",
 };
 
@@ -110,6 +61,98 @@ function formatCurrency(amount: number) {
 }
 
 export default function DashboardPage() {
+  const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const authState = getAuthState();
+    if (!authState.isAuthenticated) return;
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await authFetch("/api/admin/events");
+      const data = await response.json();
+      if (data.data) {
+        setEvents(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching events:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Compute stats dynamically from real data
+  const totalEvents = events.length;
+  const totalParticipants = events.reduce((sum, e) => sum + (e.participants || 0), 0);
+  const totalBudget = events.reduce((sum, e) => sum + (e.budget || 0), 0);
+  const totalSpent = events.reduce((sum, e) => sum + (e.spent || 0), 0);
+  const eventsWithCsat = events.filter((e) => e.csat && e.csat > 0);
+  const avgCsat =
+    eventsWithCsat.length > 0
+      ? eventsWithCsat.reduce((sum, e) => sum + (e.csat || 0), 0) / eventsWithCsat.length
+      : 0;
+  const activeEvents = events.filter(
+    (e) => e.status === "active" || e.status === "preparation"
+  ).length;
+
+  const quickStats = [
+    {
+      label: "Total Event",
+      value: String(totalEvents),
+      change: `${activeEvents} event aktif`,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+      color: "bg-orange-100 text-orange-600",
+    },
+    {
+      label: "Total Peserta",
+      value: String(totalParticipants),
+      change: totalEvents > 0 ? `dari ${totalEvents} event` : "Belum ada data",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 6v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      label: "Total Anggaran",
+      value: totalBudget > 0 ? formatCurrency(totalBudget) : "Rp 0",
+      change: totalSpent > 0 ? `Terpakai ${formatCurrency(totalSpent)}` : "Belum ada pengeluaran",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      color: "bg-emerald-100 text-emerald-600",
+    },
+    {
+      label: "Rata-rata CSAT",
+      value: avgCsat > 0 ? avgCsat.toFixed(1) : "—",
+      change: avgCsat >= 4 ? "Sangat Baik" : avgCsat >= 3 ? "Baik" : eventsWithCsat.length > 0 ? "Perlu Ditingkatkan" : "Belum ada data",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      color: "bg-amber-100 text-amber-600",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Title */}
@@ -165,7 +208,22 @@ export default function DashboardPage() {
         </div>
 
         <div className="divide-y divide-gray-50">
-          {events.map((event) => (
+          {events.length === 0 ? (
+            <div className="p-10 text-center">
+              <div className="text-4xl mb-3">📭</div>
+              <p className="text-sm font-medium text-gray-900">Belum ada event</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Mulai buat event pertama Anda
+              </p>
+              <Link
+                href="/admin/events"
+                className="inline-block mt-4 px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                + Buat Event
+              </Link>
+            </div>
+          ) : (
+          events.map((event) => (
             <Link
               key={event.id}
               href={`/dashboard/events/${event.id}`}
@@ -183,7 +241,7 @@ export default function DashboardPage() {
                         statusColors[event.status]
                       }`}
                     >
-                      {event.statusLabel}
+                      {statusLabels[event.status] || event.status}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
@@ -208,7 +266,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-gray-500">Progress</span>
                     <span className="font-semibold text-gray-700">
-                      {event.progress}%
+                       {event.progress || 0}%
                     </span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -218,7 +276,7 @@ export default function DashboardPage() {
                           ? "bg-emerald-500"
                           : "bg-orange-500"
                       }`}
-                      style={{ width: `${event.progress}%` }}
+                      style={{ width: `${event.progress || 0}%` }}
                     />
                   </div>
                 </div>
@@ -227,19 +285,19 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-6">
                   <div className="text-center">
                     <div className="text-sm font-bold text-gray-900">
-                      {event.participants}
+                      {event.participants || 0}
                     </div>
                     <div className="text-[10px] text-gray-400">Peserta</div>
                   </div>
                   <div className="text-center">
                     <div className="text-sm font-bold text-gray-900">
-                      {formatCurrency(event.spent)}
+                      {formatCurrency(event.spent || 0)}
                     </div>
                     <div className="text-[10px] text-gray-400">
-                      dari {formatCurrency(event.budget)}
+                      dari {formatCurrency(event.budget || 0)}
                     </div>
                   </div>
-                  {event.csat > 0 && (
+                  {event.csat && event.csat > 0 && (
                     <div className="text-center">
                       <div className="text-sm font-bold text-orange-600">
                         {event.csat}
@@ -250,7 +308,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </Link>
-          ))}
+          )))}
         </div>
       </div>
 
