@@ -9,6 +9,7 @@ import { getAuthState } from "@/lib/auth/client";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check auth
@@ -19,6 +20,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setLoading(false);
     }
   }, [router]);
+
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, []);
 
   if (loading) {
     return (
@@ -33,9 +50,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Mobile Sidebar */}
+          <div className="fixed inset-y-0 left-0 w-72 bg-white z-50 lg:hidden overflow-y-auto shadow-xl">
+            <Sidebar />
+          </div>
+        </>
+      )}
+
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        <Header onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} mobileMenuOpen={mobileMenuOpen} />
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>
     </div>
