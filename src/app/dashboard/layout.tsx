@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import MobileSidebar from "@/components/MobileSidebar";
 import Header from "@/components/Header";
 import { getAuthState } from "@/lib/auth/client";
 
@@ -64,8 +65,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={() => setMobileMenuOpen(false)}
           />
           {/* Mobile Sidebar */}
-          <div className="fixed inset-y-0 left-0 w-72 bg-white z-50 lg:hidden overflow-y-auto shadow-xl">
-            <Sidebar />
+          <div className="fixed inset-y-0 left-0 w-72 bg-white z-50 lg:hidden shadow-xl">
+            <MobileSidebar onClose={() => setMobileMenuOpen(false)} />
           </div>
         </>
       )}
