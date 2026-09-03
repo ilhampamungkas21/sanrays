@@ -1,0 +1,8 @@
+Email	Password	Role
+ahmad@sanrays.com	admin123	Super Admin
+sarah@sanrays.com	admin123	Admin
+budi@sanrays.com	admin123	Admin
+diana@sanrays.com	admin123	Event Manager
+fitri@sanrays.com	admin123	Finance
+gunawan@sanrays.com	admin123	Finance
+irwan@sanrays.com	admin123	Stakeholder
