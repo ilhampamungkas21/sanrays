@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Event } from "@/lib/types";
-import { mockEvents } from "@/lib/mock-data";
 
 function EventCard({ event, variant }: { event: Event; variant: "public" | "internal" }) {
   const fmt = (n: number) =>
@@ -87,17 +86,17 @@ export default function EventsSection() {
     fetch("/api/events?eventType=public")
       .then((r) => r.json())
       .then(({ data }) => {
-        setPublic(data?.length ? data : mockEvents.filter((e) => e.eventType === "public"));
+        setPublic(data || []);
       })
-      .catch(() => setPublic(mockEvents.filter((e) => e.eventType === "public") as Event[]))
+      .catch(() => setPublic([]))
       .finally(() => setLoading(false));
 
     fetch("/api/events?eventType=internal")
       .then((r) => r.json())
       .then(({ data }) => {
-        setInternal(data?.length ? data : mockEvents.filter((e) => e.eventType === "internal"));
+        setInternal(data || []);
       })
-      .catch(() => setInternal(mockEvents.filter((e) => e.eventType === "internal") as Event[]));
+      .catch(() => setInternal([]));
   }, []);
 
   if (loading) {
