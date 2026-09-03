@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import EventsSection from "@/components/EventsSection";
+import { useState } from "react";
 
 const trainingProducts = [
   {
@@ -41,6 +44,8 @@ const trainingProducts = [
 ];
 
 export default function LandingPage() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white">
       {/* NAVBAR */}
@@ -57,11 +62,26 @@ export default function LandingPage() {
               <a href="#jadwal-event" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Jadwal Event</a>
               <Link href="/login" className="px-5 py-2 bg-orange-500 text-white text-sm font-semibold rounded-full hover:bg-orange-600 transition-colors shadow-sm">Masuk</Link>
             </div>
-            <button className="md:hidden p-2 text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <button className="md:hidden p-2 text-gray-600" onClick={() => setMobileOpen(!mobileOpen)}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
             </button>
           </div>
         </div>
+        {/* Mobile menu */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-3">
+            <a href="#tentang" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-orange-600 py-2">Tentang Kami</a>
+            <a href="#layanan" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-orange-600 py-2">Layanan</a>
+            <a href="#jadwal-event" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-orange-600 py-2">Jadwal Event</a>
+            <Link href="/login" onClick={() => setMobileOpen(false)} className="block text-center px-5 py-2.5 bg-orange-500 text-white text-sm font-semibold rounded-full hover:bg-orange-600 transition-colors">Masuk</Link>
+          </div>
+        )}
       </nav>
 
       {/* HERO */}
