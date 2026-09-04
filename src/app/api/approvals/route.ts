@@ -99,34 +99,47 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get current event status
+    const { data: currentEvent } = await supabase
+      .from('events')
+      .select('status')
+      .eq('id', eventId)
+      .single();
+
     // Submit the approval/rejection
     const approval = await submitApproval(eventId, authUser.userId, action, notes);
 
     let eventApproved = false;
     let eventPublished = false;
     let eventRejected = false;
+    let message = 'Approval berhasil dicatat';
 
-    // Check if all have approved
-    const allApproved = await checkAllApproved(eventId);
-
-    if (allApproved) {
-      // All approved - publish the event
-      await setEventApproved(eventId);
-      eventApproved = true;
-      eventPublished = true;
-    } else if (action === 'reject') {
-      // Someone rejected - mark event as rejected
-      await setEventRejected(eventId);
-      eventRejected = true;
+    // Only update event status if still in pending_approval
+    if (currentEvent?.status === 'pending_approval') {
+      if (action === 'reject') {
+        // Someone rejected - mark event as rejected
+        await setEventRejected(eventId);
+        eventRejected = true;
+        message = 'Event ditolak';
+      } else {
+        // Check if all have approved
+        const allApproved = await checkAllApproved(eventId);
+        if (allApproved) {
+          await setEventApproved(eventId);
+          eventApproved = true;
+          eventPublished = true;
+          message = 'Event berhasil disetujui dan dipublish';
+        }
+      }
+    } else if (currentEvent?.status === 'approved') {
+      message = 'Event sudah disetujui semua';
+    } else if (currentEvent?.status === 'rejected') {
+      message = 'Event sudah ditolak';
     }
 
     return NextResponse.json({
       success: true,
-      message: eventApproved
-        ? 'Event berhasil disetujui dan dipublish'
-        : eventRejected
-        ? 'Event ditolak'
-        : 'Approval berhasil dicatat',
+      message,
       approval,
       eventApproved,
       eventPublished,
