@@ -8,11 +8,16 @@ import { supabase } from '@/lib/db/supabase';
 export async function POST(request: Request) {
   try {
     const authUser = getAuthUser(request);
+    console.log('Auth user:', authUser);
+
     if (!authUser) {
       return NextResponse.json({ error: 'Tidak memiliki akses' }, { status: 401 });
     }
 
     // Check if user can submit for approval
+    console.log('User role:', authUser.role);
+    console.log('Has permission:', hasPermission(authUser.role, 'approval:submit'));
+
     if (!hasPermission(authUser.role, 'approval:submit')) {
       return NextResponse.json(
         { error: 'Anda tidak memiliki permission untuk submit event' },
@@ -22,6 +27,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { eventId } = body;
+    console.log('Event ID:', eventId);
 
     if (!eventId) {
       return NextResponse.json({ error: 'eventId diperlukan' }, { status: 400 });
@@ -34,20 +40,26 @@ export async function POST(request: Request) {
       .eq('id', eventId)
       .single();
 
+    console.log('Event:', event);
+    console.log('Event error:', eventError);
+
     if (eventError || !event) {
       return NextResponse.json({ error: 'Event tidak ditemukan' }, { status: 404 });
     }
 
     // Check if event is in draft status
+    console.log('Event status:', event.status);
     if (event.status !== 'draft') {
       return NextResponse.json(
-        { error: 'Hanya event dengan status draft yang bisa diajukan untuk persetujuan' },
+        { error: 'Hanya event dengan status draft yang bisa diajukan untuk persetujuan. Status saat ini: ' + event.status },
         { status: 400 }
       );
     }
 
     // Submit for approval
+    console.log('Submitting for approval...');
     await submitEventForApproval(eventId);
+    console.log('Submitted successfully');
 
     return NextResponse.json({
       success: true,
@@ -55,7 +67,11 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error('Submit for approval error:', err);
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: 'Gagal submit event untuk persetujuan: ' + errorMessage }, { status: 500 });
+    console.error('Error type:', typeof err);
+    console.error('Error message:', err instanceof Error ? err.message : String(err));
+
+    return NextResponse.json({
+      error: 'Gagal submit event untuk persetujuan. Error: ' + (err instanceof Error ? err.message : String(err))
+    }, { status: 500 });
   }
 }
