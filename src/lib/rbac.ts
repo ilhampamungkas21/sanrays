@@ -22,6 +22,11 @@ export const permissions = {
   'event:delete': ['super_admin', 'admin'],
   'event:edit_own': ['event_manager'], // Can only edit own events
 
+  // Event Approval
+  'approval:view': ['super_admin', 'stakeholder'],
+  'approval:create': ['super_admin', 'stakeholder'],
+  'approval:submit': ['super_admin', 'admin', 'event_manager'], // Can submit for approval
+
   // User Management
   'user:view': ['super_admin', 'admin'],
   'user:create': ['super_admin', 'admin'],

@@ -176,6 +176,31 @@ export default function AdminEventsPage() {
     }
   };
 
+  const handleSubmitForApproval = async (event: Event) => {
+    if (!confirm(`Ajukan event "${event.name}" untuk persetujuan?\n\nSetelah diajukan, stakeholder dan super admin akan review event ini.`)) {
+      return;
+    }
+
+    try {
+      const response = await authFetch('/api/events/submit-approval', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(result.message);
+        fetchEvents();
+      } else {
+        alert(result.error || "Gagal提交 untuk persetujuan");
+      }
+    } catch (err) {
+      alert("Terjadi kesalahan");
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -196,6 +221,10 @@ export default function AdminEventsPage() {
   };
 
   const statusLabels: Record<string, string> = {
+    draft: "Draft",
+    pending_approval: "Menunggu Approval",
+    approved: "Disetujui",
+    rejected: "Ditolak",
     preparation: "Persiapan",
     active: "Berlangsung",
     completed: "Selesai",
@@ -290,6 +319,9 @@ export default function AdminEventsPage() {
                       event.status === "completed" ? "bg-emerald-100 text-emerald-700" :
                       event.status === "active" ? "bg-blue-100 text-blue-700" :
                       event.status === "preparation" ? "bg-orange-100 text-orange-700" :
+                      event.status === "pending_approval" ? "bg-amber-100 text-amber-700" :
+                      event.status === "approved" ? "bg-emerald-100 text-emerald-700" :
+                      event.status === "rejected" ? "bg-red-100 text-red-700" :
                       "bg-gray-100 text-gray-600"
                     }`}>
                       {statusLabels[event.status]}
@@ -320,6 +352,19 @@ export default function AdminEventsPage() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      {/* Submit for Approval button - only for draft events */}
+                      {event.status === 'draft' && hasPermission(userRole, 'approval:submit') && (
+                        <button
+                          onClick={() => handleSubmitForApproval(event)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+                          title="Ajukan untuk persetujuan"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Ajukan
+                        </button>
+                      )}
                       <Link
                         href={`/admin/kelola/${event.id}`}
                         className="p-2 text-orange-500 hover:text-orange-700 transition-colors"

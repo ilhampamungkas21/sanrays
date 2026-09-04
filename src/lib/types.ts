@@ -17,7 +17,7 @@ export interface Event {
   endDate?: string;
   location?: string;
   theme?: string;
-  status: 'draft' | 'preparation' | 'active' | 'completed' | 'cancelled';
+  status: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'preparation' | 'active' | 'completed' | 'cancelled';
   eventType: 'public' | 'internal';
   description?: string;
   shortDescription?: string;
