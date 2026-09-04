@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/rbac';
 import { getEventsPendingApproval, getEventsActionedByUser } from '@/lib/db/approval';
-import { query } from '@/lib/db/mysql';
-import { RowDataPacket } from 'mysql2/promise';
+import { supabase } from '@/lib/db/supabase';
 
 // GET /api/approvals/my-pending - Get events pending user's approval
 export async function GET(request: Request) {
@@ -35,14 +34,17 @@ export async function GET(request: Request) {
     // Enrich with event details
     if (events.length > 0) {
       const eventIds = events.map((e) => e.eventId);
-      const placeholders = eventIds.map(() => '?').join(',');
 
-      const eventDetails = await query<RowDataPacket[]>(
-        `SELECT id, location, status, cover_gradient, short_description FROM events WHERE id IN (${placeholders})`,
-        eventIds
-      );
+      const { data: eventDetails, error } = await supabase
+        .from('events')
+        .select('id, location, status, cover_gradient, short_description')
+        .in('id', eventIds);
 
-      const eventMap = new Map(eventDetails.map((e) => [e.id, e]));
+      if (error) {
+        console.error('Error fetching event details:', error);
+      }
+
+      const eventMap = new Map((eventDetails || []).map((e) => [e.id, e]));
 
       const enrichedEvents = events.map((e) => {
         const details = eventMap.get(e.eventId);

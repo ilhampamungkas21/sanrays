@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/rbac';
 import { submitEventForApproval } from '@/lib/db/approval';
-import { query } from '@/lib/db/mysql';
-import { RowDataPacket } from 'mysql2/promise';
+import { supabase } from '@/lib/db/supabase';
 
 // POST /api/events/submit-approval - Submit event for approval
 export async function POST(request: Request) {
@@ -29,16 +28,15 @@ export async function POST(request: Request) {
     }
 
     // Get event details
-    const rows = await query<RowDataPacket[]>(
-      `SELECT id, name, status, organizer FROM events WHERE id = ?`,
-      [eventId]
-    );
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id, name, status, organizer')
+      .eq('id', eventId)
+      .single();
 
-    if (rows.length === 0) {
+    if (eventError || !event) {
       return NextResponse.json({ error: 'Event tidak ditemukan' }, { status: 404 });
     }
-
-    const event = rows[0];
 
     // Check if event is in draft status
     if (event.status !== 'draft') {

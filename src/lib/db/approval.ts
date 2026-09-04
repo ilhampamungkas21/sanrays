@@ -1,10 +1,9 @@
 /**
- * Event Approval Helper Functions - MySQL Version
- * Provides functions for managing event approvals
+ * Event Approval Helper Functions
+ * Provides functions for managing event approvals (Supabase)
  */
 
-import { query, generateId } from './mysql';
-import { RowDataPacket } from 'mysql2/promise';
+import { supabase, generateId } from '../db/supabase';
 
 // Roles that are required to approve events
 const APPROVAL_REQUIRED_ROLES = ['super_admin', 'stakeholder'];
@@ -55,14 +54,20 @@ function formatApproval(row: Record<string, unknown>): EventApproval {
  * Get all approvers (users with approval-required roles)
  */
 export async function getApprovers(): Promise<{ id: string; name: string; role: string }[]> {
-  const rows = await query<RowDataPacket[]>(
-    `SELECT id, name, role FROM users WHERE role IN (${APPROVAL_REQUIRED_ROLES.map(() => '?').join(',')})`,
-    APPROVAL_REQUIRED_ROLES
-  );
-  return rows.map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-    role: row.role as string,
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, role')
+    .in('role', APPROVAL_REQUIRED_ROLES);
+
+  if (error) {
+    console.error('Error fetching approvers:', error);
+    throw error;
+  }
+
+  return (data || []).map((user) => ({
+    id: user.id,
+    name: user.name,
+    role: user.role,
   }));
 }
 
@@ -73,26 +78,44 @@ export async function getApprovers(): Promise<{ id: string; name: string; role: 
 export async function createInitialApprovalRecords(eventId: string): Promise<EventApproval[]> {
   const approvers = await getApprovers();
 
-  for (const approver of approvers) {
-    const id = generateId();
-    await query(
-      `INSERT INTO event_approvals (id, event_id, user_id, user_role, user_name, status) VALUES (?, ?, ?, ?, ?, 'pending')`,
-      [id, eventId, approver.id, approver.role, approver.name]
-    );
+  const records = approvers.map((approver) => ({
+    id: generateId(),
+    event_id: eventId,
+    user_id: approver.id,
+    user_role: approver.role,
+    user_name: approver.name,
+    status: 'pending' as const,
+  }));
+
+  const { data, error } = await supabase
+    .from('event_approvals')
+    .insert(records)
+    .select();
+
+  if (error) {
+    console.error('Error creating approval records:', error);
+    throw error;
   }
 
-  return getEventApprovals(eventId);
+  return (data || []).map(formatApproval);
 }
 
 /**
  * Get all approval records for an event
  */
 export async function getEventApprovals(eventId: string): Promise<EventApproval[]> {
-  const rows = await query<RowDataPacket[]>(
-    `SELECT * FROM event_approvals WHERE event_id = ? ORDER BY created_at ASC`,
-    [eventId]
-  );
-  return rows.map(formatApproval);
+  const { data, error } = await supabase
+    .from('event_approvals')
+    .select('*')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching event approvals:', error);
+    throw error;
+  }
+
+  return (data || []).map(formatApproval);
 }
 
 /**
@@ -130,11 +153,19 @@ export async function getUserApproval(
   eventId: string,
   userId: string
 ): Promise<EventApproval | null> {
-  const rows = await query<RowDataPacket[]>(
-    `SELECT * FROM event_approvals WHERE event_id = ? AND user_id = ?`,
-    [eventId, userId]
-  );
-  return rows.length > 0 ? formatApproval(rows[0]) : null;
+  const { data, error } = await supabase
+    .from('event_approvals')
+    .select('*')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching user approval:', error);
+    throw error;
+  }
+
+  return data ? formatApproval(data) : null;
 }
 
 /**
@@ -148,14 +179,23 @@ export async function submitApproval(
 ): Promise<EventApproval> {
   const status = action === 'approve' ? 'approved' : 'rejected';
 
-  await query(
-    `UPDATE event_approvals SET status = ?, notes = ?, updated_at = NOW() WHERE event_id = ? AND user_id = ?`,
-    [status, notes || null, eventId, userId]
-  );
+  const { data, error } = await supabase
+    .from('event_approvals')
+    .update({
+      status,
+      notes: notes || null,
+    })
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .select()
+    .single();
 
-  const approval = await getUserApproval(eventId, userId);
-  if (!approval) throw new Error('Approval not found');
-  return approval;
+  if (error) {
+    console.error('Error submitting approval:', error);
+    throw error;
+  }
+
+  return formatApproval(data);
 }
 
 /**
@@ -172,20 +212,35 @@ export async function checkAllApproved(eventId: string): Promise<boolean> {
  * Set event to approved status and publish it
  */
 export async function setEventApproved(eventId: string): Promise<void> {
-  await query(
-    `UPDATE events SET status = 'approved', published = 1 WHERE id = ?`,
-    [eventId]
-  );
+  const { error } = await supabase
+    .from('events')
+    .update({
+      status: 'approved',
+      published: true,
+    })
+    .eq('id', eventId);
+
+  if (error) {
+    console.error('Error approving event:', error);
+    throw error;
+  }
 }
 
 /**
  * Set event to rejected status
  */
 export async function setEventRejected(eventId: string): Promise<void> {
-  await query(
-    `UPDATE events SET status = 'rejected' WHERE id = ?`,
-    [eventId]
-  );
+  const { error } = await supabase
+    .from('events')
+    .update({
+      status: 'rejected',
+    })
+    .eq('id', eventId);
+
+  if (error) {
+    console.error('Error rejecting event:', error);
+    throw error;
+  }
 }
 
 /**
@@ -193,10 +248,17 @@ export async function setEventRejected(eventId: string): Promise<void> {
  */
 export async function submitEventForApproval(eventId: string): Promise<boolean> {
   // Update event status to pending_approval
-  await query(
-    `UPDATE events SET status = 'pending_approval' WHERE id = ?`,
-    [eventId]
-  );
+  const { error: updateError } = await supabase
+    .from('events')
+    .update({
+      status: 'pending_approval',
+    })
+    .eq('id', eventId);
+
+  if (updateError) {
+    console.error('Error updating event status:', updateError);
+    throw updateError;
+  }
 
   // Create initial approval records
   await createInitialApprovalRecords(eventId);
@@ -208,17 +270,38 @@ export async function submitEventForApproval(eventId: string): Promise<boolean> 
  * Get events pending user's approval
  */
 export async function getEventsPendingApproval(userId: string): Promise<{ eventId: string; eventName: string; eventDate: string }[]> {
-  const rows = await query<RowDataPacket[]>(
-    `SELECT ea.event_id, e.name, e.date
-     FROM event_approvals ea
-     JOIN events e ON e.id = ea.event_id
-     WHERE ea.user_id = ? AND ea.status = 'pending' AND e.status = 'pending_approval'`,
-    [userId]
-  );
-  return rows.map((row) => ({
-    eventId: row.event_id as string,
-    eventName: row.name as string,
-    eventDate: row.date as string,
+  const { data: approvals, error } = await supabase
+    .from('event_approvals')
+    .select('event_id, status')
+    .eq('user_id', userId)
+    .eq('status', 'pending');
+
+  if (error) {
+    console.error('Error fetching pending approvals:', error);
+    throw error;
+  }
+
+  if (!approvals || approvals.length === 0) {
+    return [];
+  }
+
+  const eventIds = approvals.map((a) => a.event_id);
+
+  const { data: events, error: eventsError } = await supabase
+    .from('events')
+    .select('id, name, date')
+    .in('id', eventIds)
+    .eq('status', 'pending_approval');
+
+  if (eventsError) {
+    console.error('Error fetching events:', eventsError);
+    throw eventsError;
+  }
+
+  return (events || []).map((event) => ({
+    eventId: event.id,
+    eventName: event.name,
+    eventDate: event.date,
   }));
 }
 
@@ -226,18 +309,41 @@ export async function getEventsPendingApproval(userId: string): Promise<{ eventI
  * Get events that user has already approved/rejected
  */
 export async function getEventsActionedByUser(userId: string): Promise<{ eventId: string; eventName: string; eventDate: string; status: string; notes?: string }[]> {
-  const rows = await query<RowDataPacket[]>(
-    `SELECT ea.event_id, ea.status, ea.notes, e.name, e.date
-     FROM event_approvals ea
-     JOIN events e ON e.id = ea.event_id
-     WHERE ea.user_id = ? AND ea.status != 'pending'`,
-    [userId]
-  );
-  return rows.map((row) => ({
-    eventId: row.event_id as string,
-    eventName: row.name as string,
-    eventDate: row.date as string,
-    status: row.status as string,
-    notes: row.notes as string | undefined,
-  }));
+  const { data: approvals, error } = await supabase
+    .from('event_approvals')
+    .select('event_id, status, notes')
+    .eq('user_id', userId)
+    .neq('status', 'pending');
+
+  if (error) {
+    console.error('Error fetching actioned approvals:', error);
+    throw error;
+  }
+
+  if (!approvals || approvals.length === 0) {
+    return [];
+  }
+
+  const eventIds = approvals.map((a) => a.event_id);
+
+  const { data: events, error: eventsError } = await supabase
+    .from('events')
+    .select('id, name, date')
+    .in('id', eventIds);
+
+  if (eventsError) {
+    console.error('Error fetching events:', eventsError);
+    throw eventsError;
+  }
+
+  return (events || []).map((event) => {
+    const approval = approvals.find((a) => a.event_id === event.id);
+    return {
+      eventId: event.id,
+      eventName: event.name,
+      eventDate: event.date,
+      status: approval?.status || 'pending',
+      notes: approval?.notes || undefined,
+    };
+  });
 }

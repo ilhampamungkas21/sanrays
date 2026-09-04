@@ -9,8 +9,7 @@ import {
   setEventApproved,
   setEventRejected,
 } from '@/lib/db/approval';
-import { query } from '@/lib/db/mysql';
-import { RowDataPacket } from 'mysql2/promise';
+import { supabase } from '@/lib/db/supabase';
 
 // GET /api/approvals?eventId=xxx - Get approvals for an event
 export async function GET(request: Request) {
@@ -73,16 +72,15 @@ export async function POST(request: Request) {
     }
 
     // Get event details
-    const rows = await query<RowDataPacket[]>(
-      `SELECT id, name, status FROM events WHERE id = ?`,
-      [eventId]
-    );
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id, name, status')
+      .eq('id', eventId)
+      .single();
 
-    if (rows.length === 0) {
+    if (eventError || !event) {
       return NextResponse.json({ error: 'Event tidak ditemukan' }, { status: 404 });
     }
-
-    const event = rows[0];
 
     // Check if event is in pending_approval status
     if (event.status !== 'pending_approval') {
