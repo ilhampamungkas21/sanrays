@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error('Submit for approval error:', err);
-    return NextResponse.json({ error: 'Gagal submit event untuk persetujuan' }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: 'Gagal submit event untuk persetujuan: ' + errorMessage }, { status: 500 });
   }
 }
