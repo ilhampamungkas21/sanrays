@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { authFetch, getAuthState } from '@/lib/auth/client';
 import { hasPermission } from '@/lib/rbac';
 
+interface ApproverStatus {
+  userId: string;
+  userName: string;
+  userRole: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+}
+
 interface PendingEvent {
   eventId: string;
   eventName: string;
@@ -15,6 +23,11 @@ interface PendingEvent {
   shortDescription?: string;
   userApprovalStatus?: string;
   userHasActed?: boolean;
+  userHasRejected?: boolean;
+  approvers: ApproverStatus[];
+  pendingApprovers: string[];
+  approvedCount: number;
+  totalApprovers: number;
 }
 
 interface ActionedEvent extends PendingEvent {
@@ -89,6 +102,19 @@ export default function ApprovalsPage() {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">✓ Approved</span>;
+      case 'rejected':
+        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">✗ Ditolak</span>;
+      case 'pending':
+        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">⏳ Menunggu</span>;
+      default:
+        return null;
+    }
+  };
+
   if (!canViewApproval) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -149,7 +175,7 @@ export default function ApprovalsPage() {
       {/* Content */}
       {loading ? (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
+          {[1, 2].map((i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-100 p-6 animate-pulse">
               <div className="h-5 bg-gray-200 rounded w-1/3 mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
@@ -161,8 +187,8 @@ export default function ApprovalsPage() {
         pendingEvents.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
             <div className="text-4xl mb-3">✅</div>
-            <p className="text-sm font-medium text-gray-900">Semua sudah approve!</p>
-            <p className="text-xs text-gray-500 mt-1">Tidak ada event yang menunggu persetujuan</p>
+            <p className="text-sm font-medium text-gray-900">Tidak ada event pending</p>
+            <p className="text-xs text-gray-500 mt-1">Semua event sudah diproses</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -173,11 +199,10 @@ export default function ApprovalsPage() {
               >
                 <div className={`h-1.5 bg-gradient-to-r ${event.coverGradient || 'from-orange-400 to-orange-600'}`} />
                 <div className="p-6">
+                  {/* Event Info */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
-                        {event.eventName}
-                      </h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,36 +219,78 @@ export default function ApprovalsPage() {
                           </span>
                         )}
                       </div>
-                      {event.shortDescription && (
-                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                          {event.shortDescription}
-                        </p>
-                      )}
-
-                      {/* User's approval status */}
-                      {event.userHasActed ? (
-                        <div className="mt-3 flex items-center gap-2">
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                            event.userApprovalStatus === 'approved'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {event.userApprovalStatus === 'approved' ? '✓ Anda sudah menyetujui' : '✗ Anda sudah menolak'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="mt-3">
-                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
-                            ⏳ Menunggu persetujuan Anda
-                          </span>
-                        </div>
-                      )}
                     </div>
+
+                    {/* Progress */}
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {event.approvedCount}/{event.totalApprovers} approved
+                      </div>
+                      <div className="w-24 h-2 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                        <div
+                          className="h-full bg-orange-500 rounded-full"
+                          style={{ width: `${(event.approvedCount / event.totalApprovers) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* User's approval status */}
+                  <div className="mt-3">
+                    {event.userHasActed ? (
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full ${
+                        event.userApprovalStatus === 'approved'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}>
+                        {event.userApprovalStatus === 'approved' ? '✓ Anda sudah menyetujui' : '✗ Anda sudah menolak'}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                        ⏳ Menunggu persetujuan Anda
+                      </span>
+                    )}
+                  </div>
+
+                  {/* All Approvers List */}
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                      Status Approver
+                    </h4>
+                    <div className="space-y-2">
+                      {event.approvers.map((approver) => (
+                        <div key={approver.userId} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                              approver.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                              approver.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {approver.userName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">{approver.userName}</span>
+                              <span className="text-xs text-gray-500 ml-2 capitalize">{approver.userRole.replace('_', ' ')}</span>
+                            </div>
+                          </div>
+                          {getStatusBadge(approver.status)}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pending approvers notice */}
+                    {event.pendingApprovers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-amber-600">
+                          <span className="font-semibold">Belum menyetujui:</span> {event.pendingApprovers.join(', ')}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Notes input for reject */}
                   {selectedEvent?.eventId === event.eventId && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-100">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Catatan Penolakan (wajib)
                       </label>
@@ -231,7 +298,7 @@ export default function ApprovalsPage() {
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Masukkan alasan penolakan..."
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
                         rows={3}
                       />
                       <div className="flex gap-2 mt-3">
@@ -245,9 +312,9 @@ export default function ApprovalsPage() {
                     </div>
                   )}
 
-                  {/* Action buttons - only show if user hasn't acted yet */}
-                  {!event.userHasActed && (
-                    <div className="mt-6 flex gap-3">
+                  {/* Action buttons */}
+                  {!event.userHasActed && !event.userHasRejected && (
+                    <div className="mt-4 flex gap-3">
                       <button
                         onClick={() => {
                           setSelectedEvent(event);
@@ -256,14 +323,14 @@ export default function ApprovalsPage() {
                         disabled={actionLoading === event.eventId}
                         className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
-                        {actionLoading === event.eventId ? 'Memproses...' : 'Tolak'}
+                        {actionLoading === event.eventId ? 'Memproses...' : '❌ Tolak'}
                       </button>
                       <button
                         onClick={() => handleApproval(event.eventId, 'approve')}
                         disabled={actionLoading === event.eventId}
                         className="flex-1 px-4 py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
                       >
-                        {actionLoading === event.eventId ? 'Memproses...' : 'Setuju'}
+                        {actionLoading === event.eventId ? 'Memproses...' : '✅ Setuju'}
                       </button>
                     </div>
                   )}
@@ -296,12 +363,12 @@ export default function ApprovalsPage() {
                 </div>
                 <span
                   className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                    event.status === 'approved'
+                    event.userApprovalStatus === 'approved'
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-red-100 text-red-700'
                   }`}
                 >
-                  {event.status === 'approved' ? 'Disetujui' : 'Ditolak'}
+                  {event.userApprovalStatus === 'approved' ? '✓ Disetujui' : '✗ Ditolak'}
                 </span>
               </div>
               {event.notes && (
