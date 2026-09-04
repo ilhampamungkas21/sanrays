@@ -159,6 +159,11 @@ export default function ApprovalSection({ eventId, eventStatus, userRole }: Appr
             {approvalStatus.totalRejected} penolakan
           </p>
         )}
+        {approvalStatus.totalPending > 0 && (
+          <p className="text-xs text-amber-600 mt-2">
+            {approvalStatus.totalPending} belum approve
+          </p>
+        )}
       </div>
 
       {/* Approvers List */}
@@ -168,7 +173,11 @@ export default function ApprovalSection({ eventId, eventStatus, userRole }: Appr
           {approvalStatus.approvers.map((approver) => (
             <div key={approver.id} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-600">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  approver.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                  approver.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                  'bg-amber-100 text-amber-700'
+                }`}>
                   {approver.userName.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -189,6 +198,17 @@ export default function ApprovalSection({ eventId, eventStatus, userRole }: Appr
             </div>
           ))}
         </div>
+        {approvalStatus.totalPending > 0 && (
+          <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-100">
+            <p className="text-xs text-amber-700">
+              <span className="font-semibold">Menunggu persetujuan dari:</span>{' '}
+              {approvalStatus.approvers
+                .filter(a => a.status === 'pending')
+                .map(a => a.userName)
+                .join(', ')}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons - Only show for users who can approve and haven't acted yet */}
