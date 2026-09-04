@@ -26,9 +26,9 @@ export async function GET(request: Request) {
     let events: { eventId: string; eventName: string; eventDate: string; status?: string; notes?: string }[] = [];
 
     if (type === 'pending') {
-      events = await getEventsPendingApproval(authUser.id);
+      events = await getEventsPendingApproval(authUser.userId);
     } else {
-      events = await getEventsActionedByUser(authUser.id);
+      events = await getEventsActionedByUser(authUser.userId);
     }
 
     // Enrich with event details

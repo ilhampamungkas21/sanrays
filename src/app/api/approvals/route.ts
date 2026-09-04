@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     }
 
     // Check if user already approved/rejected
-    const existingApproval = await getUserApproval(eventId, authUser.id);
+    const existingApproval = await getUserApproval(eventId, authUser.userId);
     if (existingApproval && existingApproval.status !== 'pending') {
       return NextResponse.json(
         { error: 'Anda sudah memberikan keputusan untuk event ini' },
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     }
 
     // Submit the approval/rejection
-    const approval = await submitApproval(eventId, authUser.id, action, notes);
+    const approval = await submitApproval(eventId, authUser.userId, action, notes);
 
     let eventApproved = false;
     let eventPublished = false;

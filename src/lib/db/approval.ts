@@ -3,7 +3,7 @@
  * Provides functions for managing event approvals
  */
 
-import { supabase, generateId, toCamelCase, toCamelCaseArray } from './db/supabase';
+import { supabase, generateId, toCamelCase, toCamelCaseArray } from '../db/supabase';
 import { EventApproval, ApprovalStatus } from '@/lib/types/approval';
 
 // Roles that are required to approve events
