@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/rbac';
 import { submitEventForApproval } from '@/lib/db/approval';
-import { supabase } from '@/lib/db/supabase';
+import { query } from '@/lib/db/mysql';
+import { RowDataPacket } from 'mysql2/promise';
 
 // POST /api/events/submit-approval - Submit event for approval
 export async function POST(request: Request) {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     // Check if user can submit for approval
     if (!hasPermission(authUser.role, 'approval:submit')) {
       return NextResponse.json(
-        { error: 'Anda tidak memiliki权限 untuk提交 event' },
+        { error: 'Anda tidak memiliki permission untuk submit event' },
         { status: 403 }
       );
     }
@@ -28,15 +29,16 @@ export async function POST(request: Request) {
     }
 
     // Get event details
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('id, name, status, organizer')
-      .eq('id', eventId)
-      .single();
+    const rows = await query<RowDataPacket[]>(
+      `SELECT id, name, status, organizer FROM events WHERE id = ?`,
+      [eventId]
+    );
 
-    if (eventError || !event) {
+    if (rows.length === 0) {
       return NextResponse.json({ error: 'Event tidak ditemukan' }, { status: 404 });
     }
+
+    const event = rows[0];
 
     // Check if event is in draft status
     if (event.status !== 'draft') {
@@ -55,6 +57,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error('Submit for approval error:', err);
-    return NextResponse.json({ error: 'Gagal提交 event untuk persetujuan' }, { status: 500 });
+    return NextResponse.json({ error: 'Gagal submit event untuk persetujuan' }, { status: 500 });
   }
 }

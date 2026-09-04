@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/rbac';
 import { getEventsPendingApproval, getEventsActionedByUser } from '@/lib/db/approval';
-import { supabase, toCamelCase, toCamelCaseArray } from '@/lib/db/supabase';
+import { query } from '@/lib/db/mysql';
+import { RowDataPacket } from 'mysql2/promise';
 
 // GET /api/approvals/my-pending - Get events pending user's approval
 export async function GET(request: Request) {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     // Check if user has approval permission
     if (!hasPermission(authUser.role, 'approval:view')) {
       return NextResponse.json(
-        { error: 'Anda tidak memiliki权限 untuk melihat approval' },
+        { error: 'Anda tidak memiliki permission untuk melihat approval' },
         { status: 403 }
       );
     }
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'pending'; // 'pending' or 'actioned'
 
-    let events: { eventId: string; eventName: string; eventDate: string; status?: string; notes?: string }[] = [];
+    let events: { eventId: string; eventName: string; eventDate: string; status?: string; notes?: string; location?: string; coverGradient?: string; shortDescription?: string }[] = [];
 
     if (type === 'pending') {
       events = await getEventsPendingApproval(authUser.userId);
@@ -34,17 +35,14 @@ export async function GET(request: Request) {
     // Enrich with event details
     if (events.length > 0) {
       const eventIds = events.map((e) => e.eventId);
+      const placeholders = eventIds.map(() => '?').join(',');
 
-      const { data: eventDetails, error } = await supabase
-        .from('events')
-        .select('*')
-        .in('id', eventIds);
+      const eventDetails = await query<RowDataPacket[]>(
+        `SELECT id, location, status, cover_gradient, short_description FROM events WHERE id IN (${placeholders})`,
+        eventIds
+      );
 
-      if (error) {
-        console.error('Error fetching event details:', error);
-      }
-
-      const eventMap = new Map((eventDetails || []).map((e) => [e.id, e]));
+      const eventMap = new Map(eventDetails.map((e) => [e.id, e]));
 
       const enrichedEvents = events.map((e) => {
         const details = eventMap.get(e.eventId);

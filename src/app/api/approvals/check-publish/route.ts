@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { getApprovalStatus } from '@/lib/db/approval';
-import { supabase } from '@/lib/db/supabase';
+import { query } from '@/lib/db/mysql';
+import { RowDataPacket } from 'mysql2/promise';
 
 // GET /api/approvals/check-publish?eventId=xxx - Check if event can be published
 export async function GET(request: Request) {
@@ -19,17 +20,17 @@ export async function GET(request: Request) {
     }
 
     // Get event details
-    const { data: event, error } = await supabase
-      .from('events')
-      .select('id, name, status')
-      .eq('id', eventId)
-      .single();
+    const rows = await query<RowDataPacket[]>(
+      `SELECT id, name, status FROM events WHERE id = ?`,
+      [eventId]
+    );
 
-    if (error || !event) {
+    if (rows.length === 0) {
       return NextResponse.json({ error: 'Event tidak ditemukan' }, { status: 404 });
     }
 
-    const approvalStatus = await getApprovalStatus(eventId, event.name, event.status);
+    const event = rows[0];
+    const approvalStatus = await getApprovalStatus(eventId, event.name as string, event.status as string);
 
     return NextResponse.json({
       data: approvalStatus,

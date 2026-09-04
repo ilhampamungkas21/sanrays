@@ -5,9 +5,12 @@ import {
   getEventApprovals,
   submitApproval,
   getUserApproval,
+  checkAllApproved,
+  setEventApproved,
+  setEventRejected,
 } from '@/lib/db/approval';
-import { checkAllApproved, setEventApproved, setEventRejected } from '@/lib/db/approval';
-import { supabase } from '@/lib/db/supabase';
+import { query } from '@/lib/db/mysql';
+import { RowDataPacket } from 'mysql2/promise';
 
 // GET /api/approvals?eventId=xxx - Get approvals for an event
 export async function GET(request: Request) {
@@ -47,7 +50,7 @@ export async function POST(request: Request) {
     // Check if user has approval permission
     if (!hasPermission(authUser.role, 'approval:create')) {
       return NextResponse.json(
-        { error: 'Anda tidak memiliki权限 untuk approval' },
+        { error: 'Anda tidak memiliki permission untuk approval' },
         { status: 403 }
       );
     }
@@ -70,15 +73,16 @@ export async function POST(request: Request) {
     }
 
     // Get event details
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('id, name, status')
-      .eq('id', eventId)
-      .single();
+    const rows = await query<RowDataPacket[]>(
+      `SELECT id, name, status FROM events WHERE id = ?`,
+      [eventId]
+    );
 
-    if (eventError || !event) {
+    if (rows.length === 0) {
       return NextResponse.json({ error: 'Event tidak ditemukan' }, { status: 404 });
     }
+
+    const event = rows[0];
 
     // Check if event is in pending_approval status
     if (event.status !== 'pending_approval') {
@@ -132,6 +136,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error('Submit approval error:', err);
-    return NextResponse.json({ error: 'Gagal提交 approval' }, { status: 500 });
+    return NextResponse.json({ error: 'Gagal submit approval' }, { status: 500 });
   }
 }
