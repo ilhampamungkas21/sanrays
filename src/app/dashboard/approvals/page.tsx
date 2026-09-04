@@ -13,6 +13,8 @@ interface PendingEvent {
   status?: string;
   coverGradient?: string;
   shortDescription?: string;
+  userApprovalStatus?: string;
+  userHasActed?: boolean;
 }
 
 interface ActionedEvent extends PendingEvent {
@@ -81,7 +83,7 @@ export default function ApprovalsPage() {
       }
     } catch (err) {
       console.error('Error submitting approval:', err);
-      alert('Terjadi kesalahan saat提交 approval');
+      alert('Terjadi kesalahan saat submit approval');
     } finally {
       setActionLoading(null);
     }
@@ -93,7 +95,7 @@ export default function ApprovalsPage() {
         <div className="text-center">
           <div className="text-4xl mb-3">🔒</div>
           <p className="text-sm font-medium text-gray-900">Akses Ditolak</p>
-          <p className="text-xs text-gray-500 mt-1">Anda tidak memiliki权限 untuk melihat halaman ini</p>
+          <p className="text-xs text-gray-500 mt-1">Anda tidak memiliki permission untuk melihat halaman ini</p>
         </div>
       </div>
     );
@@ -160,7 +162,7 @@ export default function ApprovalsPage() {
           <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
             <div className="text-4xl mb-3">✅</div>
             <p className="text-sm font-medium text-gray-900">Semua sudah approve!</p>
-            <p className="text-xs text-gray-500 mt-1">Tidak ada event yang menunggu persetujuan Anda</p>
+            <p className="text-xs text-gray-500 mt-1">Tidak ada event yang menunggu persetujuan</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -197,6 +199,25 @@ export default function ApprovalsPage() {
                           {event.shortDescription}
                         </p>
                       )}
+
+                      {/* User's approval status */}
+                      {event.userHasActed ? (
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                            event.userApprovalStatus === 'approved'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {event.userApprovalStatus === 'approved' ? '✓ Anda sudah menyetujui' : '✗ Anda sudah menolak'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-3">
+                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                            ⏳ Menunggu persetujuan Anda
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -224,26 +245,28 @@ export default function ApprovalsPage() {
                     </div>
                   )}
 
-                  {/* Action buttons */}
-                  <div className="mt-6 flex gap-3">
-                    <button
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setNotes('');
-                      }}
-                      disabled={actionLoading === event.eventId}
-                      className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-                    >
-                      {actionLoading === event.eventId ? 'Memproses...' : 'Tolak'}
-                    </button>
-                    <button
-                      onClick={() => handleApproval(event.eventId, 'approve')}
-                      disabled={actionLoading === event.eventId}
-                      className="flex-1 px-4 py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-                    >
-                      {actionLoading === event.eventId ? 'Memproses...' : 'Setuju'}
-                    </button>
-                  </div>
+                  {/* Action buttons - only show if user hasn't acted yet */}
+                  {!event.userHasActed && (
+                    <div className="mt-6 flex gap-3">
+                      <button
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setNotes('');
+                        }}
+                        disabled={actionLoading === event.eventId}
+                        className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {actionLoading === event.eventId ? 'Memproses...' : 'Tolak'}
+                      </button>
+                      <button
+                        onClick={() => handleApproval(event.eventId, 'approve')}
+                        disabled={actionLoading === event.eventId}
+                        className="flex-1 px-4 py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                      >
+                        {actionLoading === event.eventId ? 'Memproses...' : 'Setuju'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

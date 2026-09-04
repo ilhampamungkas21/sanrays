@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { hasPermission } from '@/lib/rbac';
-import { getEventsPendingApproval, getEventsActionedByUser } from '@/lib/db/approval';
+import { getEventsPendingApproval, getEventsActionedByUser, getEventApprovals } from '@/lib/db/approval';
 import { supabase } from '@/lib/db/supabase';
 
-// GET /api/approvals/my-pending - Get events pending user's approval
+// GET /api/approvals/my-pending?type=pending - Get events pending approval
 export async function GET(request: Request) {
   try {
     const authUser = getAuthUser(request);
@@ -21,58 +21,73 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'pending'; // 'pending' or 'actioned'
-
-    let events: { eventId: string; eventName: string; eventDate: string; status?: string; notes?: string; location?: string; coverGradient?: string; shortDescription?: string }[] = [];
+    const type = searchParams.get('type') || 'pending';
 
     if (type === 'pending') {
-      events = await getEventsPendingApproval(authUser.userId);
-    } else {
-      events = await getEventsActionedByUser(authUser.userId);
-    }
-
-    // Enrich with event details
-    if (events.length > 0) {
-      const eventIds = events.map((e) => e.eventId);
-
-      const { data: eventDetails, error } = await supabase
+      // Get ALL events that are pending approval (not just user's pending)
+      const { data: events, error } = await supabase
         .from('events')
-        .select('id, location, status, cover_gradient, short_description')
-        .in('id', eventIds);
+        .select('*')
+        .eq('status', 'pending_approval')
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching event details:', error);
+        console.error('Error fetching pending events:', error);
+        return NextResponse.json({ error: 'Gagal mengambil data' }, { status: 500 });
       }
 
-      const eventMap = new Map((eventDetails || []).map((e) => [e.id, e]));
-
-      const enrichedEvents = events.map((e) => {
-        const details = eventMap.get(e.eventId);
-        if (!details) return e;
-
-        return {
-          ...e,
-          location: details.location,
-          status: details.status,
-          coverGradient: details.cover_gradient,
-          shortDescription: details.short_description,
-        };
-      });
+      // Enrich with approval info for current user
+      const enrichedEvents = await Promise.all(
+        (events || []).map(async (event) => {
+          const userApproval = await getUserApprovalForEvent(event.id, authUser.userId);
+          return {
+            eventId: event.id,
+            eventName: event.name,
+            eventDate: event.date,
+            location: event.location,
+            status: event.status,
+            coverGradient: event.cover_gradient,
+            shortDescription: event.short_description,
+            userApprovalStatus: userApproval?.status || 'pending',
+            userHasActed: userApproval?.status !== 'pending',
+          };
+        })
+      );
 
       return NextResponse.json({
         data: enrichedEvents,
         count: enrichedEvents.length,
         type,
       });
-    }
+    } else {
+      // Get events that user has already actioned (approved/rejected)
+      const events = await getEventsActionedByUser(authUser.userId);
 
-    return NextResponse.json({
-      data: events,
-      count: events.length,
-      type,
-    });
+      return NextResponse.json({
+        data: events,
+        count: events.length,
+        type,
+      });
+    }
   } catch (err) {
     console.error('Get pending approvals error:', err);
     return NextResponse.json({ error: 'Gagal mengambil data' }, { status: 500 });
   }
+}
+
+// Helper to get user's approval for a specific event
+async function getUserApprovalForEvent(eventId: string, userId: string): Promise<{ status: string } | null> {
+  const { data, error } = await supabase
+    .from('event_approvals')
+    .select('status')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching user approval:', error);
+    return null;
+  }
+
+  return data ? { status: data.status } : null;
 }
