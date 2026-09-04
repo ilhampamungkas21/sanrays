@@ -50,6 +50,13 @@ function formatApproval(row: Record<string, unknown>): EventApproval {
   };
 }
 
+// Helper to format error
+function formatError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null) return JSON.stringify(error);
+  return String(error);
+}
+
 /**
  * Get all approvers (users with approval-required roles)
  */
@@ -60,8 +67,8 @@ export async function getApprovers(): Promise<{ id: string; name: string; role: 
     .in('role', APPROVAL_REQUIRED_ROLES);
 
   if (error) {
-    console.error('Error fetching approvers:', error);
-    throw error;
+    console.error('Error fetching approvers:', JSON.stringify(error));
+    throw new Error('Gagal mengambil approvers: ' + formatError(error));
   }
 
   return (data || []).map((user) => ({
@@ -77,6 +84,7 @@ export async function getApprovers(): Promise<{ id: string; name: string; role: 
  */
 export async function createInitialApprovalRecords(eventId: string): Promise<EventApproval[]> {
   const approvers = await getApprovers();
+  console.log('Approvers found:', approvers);
 
   const records = approvers.map((approver) => ({
     id: generateId(),
@@ -87,14 +95,18 @@ export async function createInitialApprovalRecords(eventId: string): Promise<Eve
     status: 'pending' as const,
   }));
 
+  console.log('Creating approval records:', records);
+
   const { data, error } = await supabase
     .from('event_approvals')
     .insert(records)
     .select();
 
+  console.log('Insert result:', data, error);
+
   if (error) {
-    console.error('Error creating approval records:', error);
-    throw error;
+    console.error('Error creating approval records:', JSON.stringify(error));
+    throw new Error('Gagal membuat approval records: ' + formatError(error));
   }
 
   return (data || []).map(formatApproval);
@@ -111,8 +123,8 @@ export async function getEventApprovals(eventId: string): Promise<EventApproval[
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('Error fetching event approvals:', error);
-    throw error;
+    console.error('Error fetching event approvals:', JSON.stringify(error));
+    throw new Error('Gagal mengambil approvals: ' + formatError(error));
   }
 
   return (data || []).map(formatApproval);
@@ -161,8 +173,8 @@ export async function getUserApproval(
     .single();
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching user approval:', error);
-    throw error;
+    console.error('Error fetching user approval:', JSON.stringify(error));
+    throw new Error('Gagal mengambil user approval: ' + formatError(error));
   }
 
   return data ? formatApproval(data) : null;
@@ -191,8 +203,8 @@ export async function submitApproval(
     .single();
 
   if (error) {
-    console.error('Error submitting approval:', error);
-    throw error;
+    console.error('Error submitting approval:', JSON.stringify(error));
+    throw new Error('Gagal submit approval: ' + formatError(error));
   }
 
   return formatApproval(data);
@@ -221,8 +233,8 @@ export async function setEventApproved(eventId: string): Promise<void> {
     .eq('id', eventId);
 
   if (error) {
-    console.error('Error approving event:', error);
-    throw error;
+    console.error('Error approving event:', JSON.stringify(error));
+    throw new Error('Gagal approve event: ' + formatError(error));
   }
 }
 
@@ -238,8 +250,8 @@ export async function setEventRejected(eventId: string): Promise<void> {
     .eq('id', eventId);
 
   if (error) {
-    console.error('Error rejecting event:', error);
-    throw error;
+    console.error('Error rejecting event:', JSON.stringify(error));
+    throw new Error('Gagal reject event: ' + formatError(error));
   }
 }
 
@@ -247,6 +259,8 @@ export async function setEventRejected(eventId: string): Promise<void> {
  * Submit event for approval (from event creator)
  */
 export async function submitEventForApproval(eventId: string): Promise<boolean> {
+  console.log('Updating event status to pending_approval...');
+
   // Update event status to pending_approval
   const { error: updateError } = await supabase
     .from('events')
@@ -256,10 +270,11 @@ export async function submitEventForApproval(eventId: string): Promise<boolean> 
     .eq('id', eventId);
 
   if (updateError) {
-    console.error('Error updating event status:', updateError);
-    throw updateError;
+    console.error('Error updating event status:', JSON.stringify(updateError));
+    throw new Error('Gagal update status event: ' + formatError(updateError));
   }
 
+  console.log('Creating initial approval records...');
   // Create initial approval records
   await createInitialApprovalRecords(eventId);
 
@@ -277,8 +292,8 @@ export async function getEventsPendingApproval(userId: string): Promise<{ eventI
     .eq('status', 'pending');
 
   if (error) {
-    console.error('Error fetching pending approvals:', error);
-    throw error;
+    console.error('Error fetching pending approvals:', JSON.stringify(error));
+    throw new Error('Gagal mengambil pending approvals: ' + formatError(error));
   }
 
   if (!approvals || approvals.length === 0) {
@@ -294,8 +309,8 @@ export async function getEventsPendingApproval(userId: string): Promise<{ eventI
     .eq('status', 'pending_approval');
 
   if (eventsError) {
-    console.error('Error fetching events:', eventsError);
-    throw eventsError;
+    console.error('Error fetching events:', JSON.stringify(eventsError));
+    throw new Error('Gagal mengambil events: ' + formatError(eventsError));
   }
 
   return (events || []).map((event) => ({
@@ -316,8 +331,8 @@ export async function getEventsActionedByUser(userId: string): Promise<{ eventId
     .neq('status', 'pending');
 
   if (error) {
-    console.error('Error fetching actioned approvals:', error);
-    throw error;
+    console.error('Error fetching actioned approvals:', JSON.stringify(error));
+    throw new Error('Gagal mengambil actioned approvals: ' + formatError(error));
   }
 
   if (!approvals || approvals.length === 0) {
@@ -332,8 +347,8 @@ export async function getEventsActionedByUser(userId: string): Promise<{ eventId
     .in('id', eventIds);
 
   if (eventsError) {
-    console.error('Error fetching events:', eventsError);
-    throw eventsError;
+    console.error('Error fetching events:', JSON.stringify(eventsError));
+    throw new Error('Gagal mengambil events: ' + formatError(eventsError));
   }
 
   return (events || []).map((event) => {
