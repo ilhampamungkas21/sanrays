@@ -39,9 +39,9 @@ export async function GET(
     // Get questions
     const { data: questionData } = await supabase
       .from('test_questions')
-      .select('id, test_id, question_text, question_type, options, order_num')
+      .select('id, test_id, question_text, question_type, options, question_order')
       .eq('test_id', test_id)
-      .order('order_num', { ascending: true });
+      .order('question_order', { ascending: true });
 
     const questions = (questionData || []).map(q => {
       const question = toCamelCase<Record<string, unknown>>(q);
@@ -54,7 +54,7 @@ export async function GET(
         questionText: question.questionText,
         questionType: question.questionType,
         options,
-        orderNum: question.orderNum,
+        orderNum: question.questionOrder,
       };
     });
 
