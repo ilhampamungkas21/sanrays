@@ -77,6 +77,7 @@ export async function POST(request: Request) {
         event_id: eventId,
         session_name: sessionName,
         session_code: sessionCode,
+        session_date: new Date().toISOString().split('T')[0], // Default to today
         is_active: true,
       })
       .select()
