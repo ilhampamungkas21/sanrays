@@ -695,28 +695,38 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
             {transactions.map(t => (
               <div key={t.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-start gap-4">
-                  {/* Photos */}
-                  <div className="flex gap-2 flex-shrink-0">
+                  {/* Links */}
+                  <div className="flex flex-col gap-2 flex-shrink-0">
                     {t.receiptUrl && (
-                      <img
-                        src={t.receiptUrl}
-                        alt="Kwitansi"
-                        className="w-16 h-16 object-cover rounded-lg border cursor-pointer hover:opacity-80"
-                        onClick={() => window.open(t.receiptUrl, '_blank')}
-                      />
+                      <a
+                        href={t.receiptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 text-blue-700 text-xs font-medium"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Kwitansi
+                      </a>
                     )}
                     {t.itemPhotoUrl && (
-                      <img
-                        src={t.itemPhotoUrl}
-                        alt="Barang"
-                        className="w-16 h-16 object-cover rounded-lg border cursor-pointer hover:opacity-80"
-                        onClick={() => window.open(t.itemPhotoUrl, '_blank')}
-                      />
+                      <a
+                        href={t.itemPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 text-purple-700 text-xs font-medium"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Foto Barang
+                      </a>
                     )}
                     {!t.receiptUrl && !t.itemPhotoUrl && (
                       <div className="w-16 h-16 bg-gray-100 rounded-lg border flex items-center justify-center">
                         <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
                     )}
@@ -1415,67 +1425,47 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
                   />
                   <input placeholder="Deskripsi" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border border-gray-200 rounded-lg" />
 
-                  {/* Foto Kwitansi */}
+                  {/* Link Kwitansi (Google Drive) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Foto Kwitansi</label>
-                    {formData.receiptUrl ? (
-                      <div className="relative">
-                        <img src={formData.receiptUrl} alt="Kwitansi" className="w-full h-32 object-cover rounded-lg border" />
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, receiptUrl: '' })}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                        <div className="flex flex-col items-center justify-center pt-2 pb-3">
-                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="text-xs text-gray-500 mt-1">Upload kwitansi</p>
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={e => handleImageUpload(e, 'receiptUrl')}
-                        />
-                      </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Link Kwitansi (Google Drive)</label>
+                    <input
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={formData.receiptUrl || ''}
+                      onChange={e => setFormData({ ...formData, receiptUrl: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg"
+                    />
+                    {formData.receiptUrl && (
+                      <a
+                        href={formData.receiptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-orange-500 hover:underline mt-1 block"
+                      >
+                        ✓ Link kwitansi tersimpan
+                      </a>
                     )}
                   </div>
 
-                  {/* Foto Barang */}
+                  {/* Link Foto Barang (Google Drive) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Foto Barang</label>
-                    {formData.itemPhotoUrl ? (
-                      <div className="relative">
-                        <img src={formData.itemPhotoUrl} alt="Barang" className="w-full h-32 object-cover rounded-lg border" />
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, itemPhotoUrl: '' })}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                        <div className="flex flex-col items-center justify-center pt-2 pb-3">
-                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="text-xs text-gray-500 mt-1">Upload foto barang</p>
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={e => handleImageUpload(e, 'itemPhotoUrl')}
-                        />
-                      </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Link Foto Barang (Google Drive)</label>
+                    <input
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={formData.itemPhotoUrl || ''}
+                      onChange={e => setFormData({ ...formData, itemPhotoUrl: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg"
+                    />
+                    {formData.itemPhotoUrl && (
+                      <a
+                        href={formData.itemPhotoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-orange-500 hover:underline mt-1 block"
+                      >
+                        ✓ Link foto barang tersimpan
+                      </a>
                     )}
                   </div>
 
