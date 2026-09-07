@@ -42,7 +42,7 @@ export async function GET(request: Request) {
         .from('test_questions')
         .select('*')
         .eq('test_id', testId)
-        .order('question_order', { ascending: true });
+        .order('order_index', { ascending: true });
 
       const questions = (questionData || []).map((row) => {
         const q = toCamelCase<Record<string, unknown>>(row);

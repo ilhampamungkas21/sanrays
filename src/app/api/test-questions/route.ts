@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       .from('test_questions')
       .select('*')
       .eq('test_id', testId)
-      .order('question_order', { ascending: true });
+      .order('order_index', { ascending: true });
 
     if (error) throw error;
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         question_text: questionText,
         question_type: questionType || 'multiple_choice',
         options: options ? JSON.stringify(options) : null,
-        question_order: orderNum || 0,
+        order_index: orderNum || 0,
       })
       .select()
       .single();

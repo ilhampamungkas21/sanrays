@@ -34,7 +34,7 @@ export async function PUT(
     if (questionText !== undefined) updates.question_text = questionText;
     if (questionType !== undefined) updates.question_type = questionType;
     if (options !== undefined) updates.options = options ? JSON.stringify(options) : null;
-    if (orderNum !== undefined) updates.question_order = orderNum;
+    if (orderNum !== undefined) updates.order_index = orderNum;
 
     const { data, error } = await supabase
       .from('test_questions')
