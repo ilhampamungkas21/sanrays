@@ -70,7 +70,7 @@ export default function LaporanPage({ params }: { params: Promise<{ event_id: st
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "peserta" | "keuangan" | "checklist" | "evaluasi">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "peserta" | "keuangan" | "checklist" | "evaluasi" | "pertanyaan">("overview");
   const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
