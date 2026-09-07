@@ -501,6 +501,26 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
     return 'Rp ' + n.toLocaleString('id-ID');
   };
 
+  // Convert Google Drive link to thumbnail preview URL
+  const getGdriveThumbnail = (url: string) => {
+    if (!url) return null;
+    // Extract file ID from various Google Drive URL formats
+    const patterns = [
+      /\/file\/d\/([a-zA-Z0-9_-]+)/,
+      /\/open\?id=([a-zA-Z0-9_-]+)/,
+      /\/drive\/folders\/([a-zA-Z0-9_-]+)/,
+      /id=([a-zA-Z0-9_-]+)/
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        // Use Google's thumbnail API
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
+      }
+    }
+    return null;
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
@@ -695,19 +715,33 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
             {transactions.map(t => (
               <div key={t.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-start gap-4">
-                  {/* Links */}
+                  {/* Links with Preview */}
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     {t.receiptUrl && (
                       <a
                         href={t.receiptUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 text-blue-700 text-xs font-medium"
+                        className="group relative"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Kwitansi
+                        <img
+                          src={getGdriveThumbnail(t.receiptUrl) || t.receiptUrl}
+                          alt="Kwitansi"
+                          className="w-16 h-16 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
+                          onError={(e) => {
+                            // Fallback to icon if image fails to load
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <div className={`w-16 h-16 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-center hidden`}>
+                          <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                          <span className="text-white text-xs font-medium">Kwitansi</span>
+                        </div>
                       </a>
                     )}
                     {t.itemPhotoUrl && (
@@ -715,12 +749,25 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
                         href={t.itemPhotoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 text-purple-700 text-xs font-medium"
+                        className="group relative"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Foto Barang
+                        <img
+                          src={getGdriveThumbnail(t.itemPhotoUrl) || t.itemPhotoUrl}
+                          alt="Barang"
+                          className="w-16 h-16 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <div className={`w-16 h-16 bg-purple-50 rounded-lg border border-purple-200 flex items-center justify-center hidden`}>
+                          <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                          <span className="text-white text-xs font-medium">Barang</span>
+                        </div>
                       </a>
                     )}
                     {!t.receiptUrl && !t.itemPhotoUrl && (
@@ -1435,15 +1482,23 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
                       onChange={e => setFormData({ ...formData, receiptUrl: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg"
                     />
-                    {formData.receiptUrl && (
-                      <a
-                        href={formData.receiptUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-orange-500 hover:underline mt-1 block"
-                      >
-                        ✓ Link kwitansi tersimpan
-                      </a>
+                    {formData.receiptUrl && getGdriveThumbnail(formData.receiptUrl) && (
+                      <div className="mt-2">
+                        <a
+                          href={formData.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img
+                            src={getGdriveThumbnail(formData.receiptUrl)!}
+                            alt="Preview Kwitansi"
+                            className="w-full h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </a>
+                        <span className="text-xs text-green-600 mt-1 block">✓ Preview kwitansi</span>
+                      </div>
                     )}
                   </div>
 
@@ -1457,15 +1512,23 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
                       onChange={e => setFormData({ ...formData, itemPhotoUrl: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg"
                     />
-                    {formData.itemPhotoUrl && (
-                      <a
-                        href={formData.itemPhotoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-orange-500 hover:underline mt-1 block"
-                      >
-                        ✓ Link foto barang tersimpan
-                      </a>
+                    {formData.itemPhotoUrl && getGdriveThumbnail(formData.itemPhotoUrl) && (
+                      <div className="mt-2">
+                        <a
+                          href={formData.itemPhotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img
+                            src={getGdriveThumbnail(formData.itemPhotoUrl)!}
+                            alt="Preview Foto Barang"
+                            className="w-full h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </a>
+                        <span className="text-xs text-green-600 mt-1 block">✓ Preview foto barang</span>
+                      </div>
                     )}
                   </div>
 
