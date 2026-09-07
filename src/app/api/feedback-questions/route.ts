@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       .from('feedback_questions')
       .select('*')
       .eq('event_id', eventId)
-      .order('order_num', { ascending: true })
+      .order('order_index', { ascending: true })
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         question_type: questionType || 'text',
         options: options ? JSON.stringify(options) : null,
         is_required: isRequired ? true : false,
-        order_num: orderNum || 0,
+        order_index: orderNum || 0,
       })
       .select()
       .single();

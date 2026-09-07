@@ -501,7 +501,7 @@ export default function LaporanPage({ params }: { params: Promise<{ event_id: st
                       {customQuestions.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {customQuestions.sort((a, b) => a.orderNum - b.orderNum).map((q: any) => {
+                            {customQuestions.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)).map((q: any) => {
                               const answer = getCustomAnswer(f, q.id);
                               return (
                                 <div key={q.id} className="bg-gray-50 rounded-lg p-3">
