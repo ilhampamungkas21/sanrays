@@ -1405,14 +1405,14 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
               <h3 className="font-bold text-gray-900">
                 {editItem ? 'Edit' : 'Tambah'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               {modalType === 'participant' && (
                 <>
                   <input placeholder="Nama" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-gray-200 rounded-lg" />
@@ -1739,7 +1739,7 @@ export default function EventKelolaPage({ params }: { params: Promise<{ event_id
                 </>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Batal</button>
               <button onClick={handleSubmit} className="px-4 py-2 text-white bg-orange-500 rounded-lg hover:bg-orange-600">Simpan</button>
             </div>
