@@ -255,6 +255,16 @@ export default function SessionDetailPage() {
                           <p className="font-medium text-gray-900">
                             {att.participantName || att.participant_id || 'Peserta'}
                           </p>
+                          {att.participantPhone && (
+                            <a
+                              href={`https://wa.me/${att.participantPhone.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-green-600 hover:underline"
+                            >
+                              📱 {att.participantPhone}
+                            </a>
+                          )}
                           <p className="text-xs text-gray-500">
                             {att.createdAt
                               ? new Date(att.createdAt).toLocaleString('id-ID', {
