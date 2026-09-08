@@ -12,6 +12,7 @@ export default function AttendancePage({ params }: { params: Promise<{ session_i
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [participantName, setParticipantName] = useState("");
+  const [participantPhone, setParticipantPhone] = useState("");
 
   useEffect(() => {
     fetchSession();
@@ -46,7 +47,7 @@ export default function AttendancePage({ params }: { params: Promise<{ session_i
       const response = await fetch(`/api/attendance-sessions/${session_id}/mark`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participantName: participantName.trim() }),
+        body: JSON.stringify({ participantName: participantName.trim(), participantPhone: participantPhone.trim() }),
       });
 
       const data = await response.json();
@@ -174,6 +175,23 @@ export default function AttendancePage({ params }: { params: Promise<{ session_i
                   }}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
                   placeholder="Ketik nama lengkap Anda"
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  No. HP (WhatsApp)
+                </label>
+                <input
+                  type="tel"
+                  value={participantPhone}
+                  onChange={(e) => {
+                    setParticipantPhone(e.target.value);
+                    setError("");
+                  }}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                  placeholder="Contoh: 081234567890"
                   disabled={submitting}
                 />
               </div>

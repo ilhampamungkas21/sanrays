@@ -10,7 +10,7 @@ export async function POST(
   try {
     const { session_id } = await params;
     const body = await request.json();
-    const { participantId, participantName } = body;
+    const { participantId, participantName, participantPhone } = body;
 
     // Check session exists and is active
     const { data: session, error: sessionError } = await supabase
@@ -52,6 +52,7 @@ export async function POST(
         id: generateId(),
         event_id: session.event_id,
         participant_name: participantName,
+        participant_phone: participantPhone || null,
         session_name: session.session_name,
         status: 'present',
       });
